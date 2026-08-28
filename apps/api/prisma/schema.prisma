@@ -1,0 +1,303 @@
+// Espelha 1:1 proposta-enciclopedia-do-bom-gosto-v3.md §4 e ADR-001.
+// Nomes de tabela/coluna em snake_case para bater com DATABASE_SPEC.md (SQL de dedup/índices/RLS usa esses nomes).
+// Qualquer divergência aqui é bug de sincronização, não fonte de verdade (AGENTS.md).
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  extensions = [postgis, pg_trgm]
+}
+
+enum Verdict {
+  RECOMMEND
+  EMERGENCY_ONLY
+  NOT_RECOMMEND
+}
+
+enum RecommendationStatus {
+  WANT_TO_TRY
+  EXPERIENCED
+  DISCARDED
+}
+
+enum SpaceRole {
+  OWNER
+  MEMBER
+}
+
+enum PurchaseLinkKind {
+  MARKETPLACE
+  OFFICIAL_WEBSITE
+  OTHER
+}
+
+model Space {
+  id              String           @id @default(cuid())
+  name            String
+  members         SpaceMember[]
+  recommendations Recommendation[]
+  places          Place[]
+  brands          Brand[]
+  collections     Collection[]
+  keywords        SearchKeyword[]
+
+  @@map("space")
+}
+
+// mapeado para "app_user": "user" é palavra reservada no Postgres
+model User {
+  id                     String           @id @default(cuid())
+  name                   String
+  email                  String           @unique
+  avatarUrl              String?          @map("avatar_url")
+  memberships            SpaceMember[]
+  experiences            Experience[]
+  createdRecommendations Recommendation[] @relation("RecCreatedBy")
+  updatedRecommendations Recommendation[] @relation("RecUpdatedBy")
+  createdPlaces          Place[]          @relation("PlaceCreatedBy")
+  updatedPlaces          Place[]          @relation("PlaceUpdatedBy")
+  createdShareCodes RecommendationShareCode[]
+  
+  @@map("app_user")
+}
+
+model SpaceMember {
+  id      String    @id @default(cuid())
+  space   Space     @relation(fields: [spaceId], references: [id])
+  spaceId String    @map("space_id")
+  user    User      @relation(fields: [userId], references: [id])
+  userId  String    @map("user_id")
+  role    SpaceRole @default(MEMBER)
+
+  @@unique([spaceId, userId])
+  @@map("space_member")
+}
+
+/// AGGREGATE ROOT — ver ADR-001
+model Recommendation {
+  id                 String                     @id @default(cuid())
+  space              Space                      @relation(fields: [spaceId], references: [id])
+  spaceId            String                     @map("space_id")
+  name               String
+  description        String?
+  category           RecommendationCategory?    @relation(fields: [categoryId], references: [id])
+  categoryId         String?                    @map("category_id")
+  brand              Brand?                     @relation(fields: [brandId], references: [id])
+  brandId            String?                    @map("brand_id")
+  status             RecommendationStatus       @default(EXPERIENCED)
+  sourceLabel        String?                     @map("source_label") // snapshot: "Recomendado por X" quando criada via import
+  verdict            Verdict?
+  rating             Decimal?                   @db.Decimal(2, 1)
+  firstExperiencedAt DateTime?                  @map("first_experienced_at")
+  lastExperiencedAt  DateTime?                  @map("last_experienced_at")
+  searchVector       Unsupported("tsvector")?   @map("search_vector")
+  keywords           RecommendationKeyword[]
+  places             RecommendationPlace[]
+  purchaseLinks      PurchaseLink[]
+  collections        CollectionRecommendation[]
+  experiences        Experience[]
+  photos             Photo[]
+  shareCodes         RecommendationShareCode[]
+  createdBy          User                       @relation("RecCreatedBy", fields: [createdById], references: [id])
+  createdById        String                     @map("created_by_id")
+  updatedBy          User                       @relation("RecUpdatedBy", fields: [updatedById], references: [id])
+  updatedById        String                     @map("updated_by_id")
+  createdAt          DateTime                   @default(now()) @map("created_at")
+  updatedAt          DateTime                   @updatedAt @map("updated_at")
+
+  @@index([spaceId])
+  @@map("recommendation")
+}
+
+model RecommendationShareCode {
+  id               String         @id @default(cuid())
+  code             String         @unique
+  recommendation   Recommendation @relation(fields: [recommendationId], references: [id])
+  recommendationId String         @map("recommendation_id")
+  createdBy        User           @relation(fields: [createdById], references: [id])
+  createdById      String         @map("created_by_id")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  expiresAt        DateTime       @map("expires_at")
+
+  @@map("recommendation_share_code")
+}
+
+model RecommendationCategory {
+  id              String           @id @default(cuid())
+  name            String           @unique
+  icon            String?
+  recommendations Recommendation[]
+
+  @@map("recommendation_category")
+}
+
+/// junção N:N Recommendation<->Place — preço vive aqui (ADR-001 decisão 3)
+model RecommendationPlace {
+  id               String         @id @default(cuid())
+  recommendation   Recommendation @relation(fields: [recommendationId], references: [id])
+  recommendationId String         @map("recommendation_id")
+  place            Place          @relation(fields: [placeId], references: [id])
+  placeId          String         @map("place_id")
+  lastPrice        Decimal?       @db.Money @map("last_price")
+  priceHistory     PriceEntry[]
+  notes            String?
+  createdAt        DateTime       @default(now()) @map("created_at")
+
+  @@unique([recommendationId, placeId])
+  @@map("recommendation_place")
+}
+
+model PriceEntry {
+  id                    String              @id @default(cuid())
+  recommendationPlace   RecommendationPlace @relation(fields: [recommendationPlaceId], references: [id])
+  recommendationPlaceId String              @map("recommendation_place_id")
+  price                 Decimal             @db.Money
+  paidAt                DateTime            @default(now()) @map("paid_at")
+
+  @@map("price_entry")
+}
+
+model PurchaseLink {
+  id               String           @id @default(cuid())
+  recommendation   Recommendation   @relation(fields: [recommendationId], references: [id])
+  recommendationId String           @map("recommendation_id")
+  label            String
+  url              String
+  kind             PurchaseLinkKind @default(OTHER)
+
+  @@map("purchase_link")
+}
+
+model Place {
+  id              String                @id @default(cuid())
+  space           Space                 @relation(fields: [spaceId], references: [id])
+  spaceId         String                @map("space_id")
+  name            String
+  category        PlaceCategory?        @relation(fields: [categoryId], references: [id])
+  categoryId      String?               @map("category_id")
+  address         String?
+  neighborhood    String?
+  city            String?
+  state           String?
+  zipCode         String?               @map("zip_code")
+  latitude        Float?
+  longitude       Float?
+  geom            Unsupported("geography(Point,4326)")?
+  phone           String?
+  whatsapp        String?
+  instagram       String?
+  website         String?
+  openingHours    Json?                 @map("opening_hours")
+  notes           String?
+  photos          Photo[]
+  recommendations RecommendationPlace[]
+  experiences     Experience[]
+  createdBy       User                  @relation("PlaceCreatedBy", fields: [createdById], references: [id])
+  createdById     String                @map("created_by_id")
+  updatedBy       User                  @relation("PlaceUpdatedBy", fields: [updatedById], references: [id])
+  updatedById     String                @map("updated_by_id")
+  createdAt       DateTime              @default(now()) @map("created_at")
+  updatedAt       DateTime              @updatedAt @map("updated_at")
+
+  @@index([spaceId])
+  @@map("place")
+}
+
+model PlaceCategory {
+  id     String  @id @default(cuid())
+  name   String  @unique
+  icon   String?
+  places Place[]
+
+  @@map("place_category")
+}
+
+model Brand {
+  id              String           @id @default(cuid())
+  space           Space            @relation(fields: [spaceId], references: [id])
+  spaceId         String           @map("space_id")
+  name            String
+  logoUrl         String?          @map("logo_url")
+  website         String?
+  recommendations Recommendation[]
+
+  @@unique([spaceId, name])
+  @@map("brand")
+}
+
+model Collection {
+  id              String                     @id @default(cuid())
+  space           Space                      @relation(fields: [spaceId], references: [id])
+  spaceId         String                     @map("space_id")
+  name            String
+  icon            String?
+  description     String?
+  recommendations CollectionRecommendation[]
+  createdAt       DateTime                   @default(now()) @map("created_at")
+
+  @@unique([spaceId, name])
+  @@map("collection")
+}
+
+model CollectionRecommendation {
+  collection       Collection     @relation(fields: [collectionId], references: [id])
+  collectionId     String         @map("collection_id")
+  recommendation   Recommendation @relation(fields: [recommendationId], references: [id])
+  recommendationId String         @map("recommendation_id")
+
+  @@id([collectionId, recommendationId])
+  @@map("collection_recommendation")
+}
+
+model SearchKeyword {
+  id              String                  @id @default(cuid())
+  space           Space                   @relation(fields: [spaceId], references: [id])
+  spaceId         String                  @map("space_id")
+  label           String
+  recommendations RecommendationKeyword[]
+
+  @@unique([spaceId, label])
+  @@map("search_keyword")
+}
+
+model RecommendationKeyword {
+  recommendation   Recommendation @relation(fields: [recommendationId], references: [id])
+  recommendationId String         @map("recommendation_id")
+  keyword          SearchKeyword  @relation(fields: [keywordId], references: [id])
+  keywordId        String         @map("keyword_id")
+
+  @@id([recommendationId, keywordId])
+  @@map("recommendation_keyword")
+}
+
+model Experience {
+  id               String         @id @default(cuid())
+  recommendation   Recommendation @relation(fields: [recommendationId], references: [id])
+  recommendationId String         @map("recommendation_id")
+  place            Place?         @relation(fields: [placeId], references: [id])
+  placeId          String?        @map("place_id")
+  author           User           @relation(fields: [authorId], references: [id])
+  authorId         String         @map("author_id")
+  rating           Int
+  comment          String?
+  visitedAt        DateTime       @default(now()) @map("visited_at")
+
+  @@map("experience")
+}
+
+model Photo {
+  id               String          @id @default(cuid())
+  url              String
+  kind             String
+  place            Place?          @relation(fields: [placeId], references: [id])
+  placeId          String?         @map("place_id")
+  recommendation   Recommendation? @relation(fields: [recommendationId], references: [id])
+  recommendationId String?         @map("recommendation_id")
+  createdAt        DateTime        @default(now()) @map("created_at")
+
+  @@map("photo")
+}

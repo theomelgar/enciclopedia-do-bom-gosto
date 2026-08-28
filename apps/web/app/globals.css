@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+   --primary: 122 35 51;
+   --primary-dark: 92 26 38;
+   --primary-accent: 122 35 51;
+   --background: 250 246 241;
+   --surface: 243 234 224;
+   --neutral: 107 97 88;
+   --success: 107 143 113;
+   --destructive: 182 84 84;
+   --text: 43 35 32;
+ }
+
+ .dark {
+   --primary: 184 78 104;
+   --primary-dark: 143 58 77;
+   --primary-accent: 208 107 130;
+   --background: 28 22 19;
+   --surface: 43 32 25;
+   --neutral: 168 156 146;
+   --success: 130 172 136;
+   --destructive: 204 115 115;
+   --text: 243 234 224;
+ }
+
+body {
+  @apply bg-background text-text font-sans transition-colors;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+}
