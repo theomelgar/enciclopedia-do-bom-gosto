@@ -86,12 +86,11 @@ export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 
 export type CreatePlaceInput = z.infer<typeof createPlaceSchema>;
 
-export type UpdatePlaceInput = Partial<CreatePlaceInput> & 
-{ 
+export type UpdatePlaceInput = Omit<Partial<CreatePlaceInput>, "latitude" | "longitude"> & {
   categoryName?: string;
   latitude?: number | null;
   longitude?: number | null;
- };
+};
 
 export const createCollectionSchema = z.object({
   name: z.string().min(1).max(80),
