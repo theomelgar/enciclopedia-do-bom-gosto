@@ -23,6 +23,15 @@ export default function PerfilPage() {
     router.replace("/login");
   }
 
+  async function handleRegisterPasskey() {
+    const { data, error } = await supabase.auth.registerPasskey();
+    if (error) {
+     alert("Não deu pra cadastrar: " + error.message);
+     return;
+    }
+    alert(`Passkey "${data.friendly_name}" cadastrada!`);
+  }
+
   return (
     <main className="min-h-screen p-4 flex flex-col gap-6 md:max-w-lg md:mx-auto md:pt-10">
       <header>
@@ -79,6 +88,15 @@ export default function PerfilPage() {
             </li>
           ))}
         </ul>
+      </section>
+      <section>
+        <h2 className="font-display text-sm text-neutral uppercase tracking-wide mb-2">Segurança</h2>
+        <button
+          onClick={handleRegisterPasskey}
+          className="rounded-xl bg-surface px-4 py-3 text-sm text-primary-accent font-medium"
+        >
+          Ativar passkey neste dispositivo
+        </button>
       </section>
       <section>
         <h2 className="font-display text-sm text-neutral uppercase tracking-wide mb-2">Aparência</h2>
