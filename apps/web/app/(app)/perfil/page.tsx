@@ -123,7 +123,7 @@ export default function PerfilPage() {
       </section>
       <button
         onClick={handleSignOut}
-        className="flex items-center justify-center gap-2 rounded-xl border border-destructive/30 text-destructive py-3 text-sm font-medium mt-auto"
+        className="flex items-center justify-center gap-2 rounded-xl border border-destructive/30 text-destructive py-3 text-sm font-medium"
       >
         <LogOut size={16} />
         Sair

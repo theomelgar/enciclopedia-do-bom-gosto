@@ -1,6 +1,6 @@
 // apps/web/app/(auth)/update-password/page.tsx
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase-client";
 
@@ -8,6 +8,16 @@ export default function UpdatePasswordPage() {
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState<"idle" | "saving" | "error">("idle");
+
+  // adicionar no topo do componente UpdatePasswordPage
+useEffect(() => {
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    if (event === "PASSWORD_RECOVERY") {
+      // sessão de recovery ativa — formulário liberado
+    }
+  });
+  return () => subscription.unsubscribe();
+}, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

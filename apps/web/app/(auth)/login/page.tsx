@@ -27,6 +27,20 @@ export default function LoginPage() {
     router.push("/home");
   }
 
+  async function handleForgotPassword() {
+    if (!email) {
+      setError("Digite seu e-mail acima primeiro.");
+      setStatus("error");
+      return;
+    }
+    setStatus("sending");
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/update-password`,
+    });
+    setStatus(error ? "error" : "sent");
+    if (error) setError(error.message);
+  }
+
   async function handleMagicLink(e: React.FormEvent) {
     e.preventDefault();
     setStatus("sending");
@@ -97,6 +111,13 @@ export default function LoginPage() {
             className="text-sm text-primary-accent"
           >
             ou receba um link por e-mail
+          </button>
+          <button
+            type="button"
+            onClick={handleForgotPassword}
+            className="text-sm text-neutral"
+          >
+            esqueci minha senha
           </button>
         </form>
       ) : (
