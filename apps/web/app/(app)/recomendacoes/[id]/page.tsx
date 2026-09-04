@@ -3,19 +3,19 @@
 // Tela "Recommendation" — reorganizada em tabs (V3 §7): topo = identidade, tabs = Onde/Comprar/Exp.
 import { useState, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useRecommendation, useSetVerdict, useUpdateRecommendation } from "@/hooks/use-recommendation";
+import { useRecommendation, useSetVerdict, useUpdateRecommendation, useDeleteRecommendation } from "@/hooks/use-recommendation";
 import { CategoryAutocomplete } from "@/components/CategoryAutocomplete";
 import { useRecommendationCategories } from "@/hooks/use-categories";import { useCollections, useAddToCollection, useRemoveFromCollection } from "@/hooks/use-collections";
 import { useBrands, useCreateBrand, useSetRecommendationBrand } from "@/hooks/use-brands";
 import { useAddPurchaseLink, useRemovePurchaseLink } from "@/hooks/use-purchase-links";
-import { useUploadPhoto } from "@/hooks/use-photos";
+import { useUploadPhoto, useDeletePhoto } from "@/hooks/use-photos";
 import { useAddExperience } from "@/hooks/use-experiences";
 import { usePlaceDedup, useCreatePlace, useLinkPlace, useUnlinkPlace } from "@/hooks/use-quick-add";
 import { useAddPriceEntry } from "@/hooks/use-price-entries";
 import { useDebounce } from "@/hooks/use-debounce";
 import { Lightbox } from "@/components/Lightbox";
 import type { Verdict } from "@ebg/shared-types";
-import { Navigation, X as XIcon, Check, Trash2, Link as LinkIcon, Pencil, Share2  } from "lucide-react";
+import { Navigation, X as XIcon, Check, Trash2, Link as LinkIcon, Pencil, Share2, MoveLeft  } from "lucide-react";
 import { ErrorState } from "@/components/ErrorState";
 import { useUpdateExperience } from "@/hooks/use-experiences";
 import { buildShareText } from "@/lib/share-text";
@@ -122,6 +122,10 @@ function RecommendationDetailContent() {
   // confirmação leve pra ações destrutivas (Nielsen 3) — substitui o ícone único por confirmar/cancelar
   const [confirmUnlinkId, setConfirmUnlinkId] = useState<string | null>(null);
   const [confirmRemoveLinkId, setConfirmRemoveLinkId] = useState<string | null>(null);
+  const deletePhoto = useDeletePhoto(id);
+  const deleteRecommendation = useDeleteRecommendation(id);
+  const [confirmDeletePhotoId, setConfirmDeletePhotoId] = useState<string | null>(null);
+  const [confirmDeleteRec, setConfirmDeleteRec] = useState(false);
 
   async function handleCreateAndLinkPlace() {
     const place = await createPlace.mutateAsync({ name: placeName });
@@ -174,7 +178,7 @@ function RecommendationDetailContent() {
       <div className="p-4 flex flex-col gap-5">
         <header className="flex items-center gap-3">
           <button aria-label="Voltar" onClick={() => router.back()} className="text-2xl">
-            ←
+            <MoveLeft size={20}/>
           </button>
           <div className="flex-1 min-w-0">
             <h1 className="font-display text-xl text-text truncate">{rec.name}</h1>
@@ -185,8 +189,30 @@ function RecommendationDetailContent() {
           <button aria-label="Compartilhar" onClick={handleShare} className="text-primary-accent">
             <Share2 size={20} />
           </button>
+          <button aria-label="Excluir recomendação" onClick={() => setConfirmDeleteRec(true)} className="text-destructive">
+            <Trash2 size={20} />
+          </button>
         </header>
 
+          {confirmDeleteRec && (
+            <div className="rounded-xl bg-destructive/10 p-4 flex flex-col gap-2">
+              <p className="text-sm text-text">
+                Excluir <strong>{rec.name}</strong>? Essa ação não pode ser desfeita.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  disabled={deleteRecommendation.isPending}
+                  onClick={() => deleteRecommendation.mutate(undefined, { onSuccess: () => router.push("/") })}
+                  className="rounded-xl bg-destructive text-white py-2 px-4 text-sm disabled:opacity-60"
+                >
+                  {deleteRecommendation.isPending ? "Excluindo..." : "Confirmar exclusão"}
+                </button>
+                <button onClick={() => setConfirmDeleteRec(false)} className="text-neutral text-sm px-3">
+                  cancelar
+                </button>
+              </div>
+            </div>
+          )}
         <section className="flex items-center gap-2 flex-wrap">
           {rec.verdict ? (
             <span className="text-sm px-3 py-1 rounded-full bg-surface font-medium text-text">
@@ -385,16 +411,43 @@ function RecommendationDetailContent() {
           <h2 className="font-display text-sm text-neutral uppercase tracking-wide mb-2">Fotos</h2>
           <div className="flex gap-2 flex-wrap">
             {rec.photos.map((p) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                key={p.id}
-                src={p.url}
-                alt=""
-                onClick={() => setLightboxUrl(p.url)}
-                className="w-20 h-20 object-cover rounded-xl cursor-pointer hover:opacity-80"
-              />
+              <div key={p.id} className="relative w-40 h-40">
+                <img
+                  src={p.url}
+                  alt=""
+                  onClick={() => setLightboxUrl(p.url)}
+                  className="w-40 h-40 object-cover rounded-xl cursor-pointer hover:opacity-80"
+                />
+                {confirmDeletePhotoId === p.id ? (
+                  <div className="absolute inset-0 rounded-xl bg-black/60 flex items-center justify-center gap-4">
+                    <button
+                      aria-label="Confirmar exclusão da foto"
+                      disabled={deletePhoto.isPending}
+                      onClick={() => { deletePhoto.mutate(p.id); setConfirmDeletePhotoId(null); }}
+                      className="h-10 w-10 flex items-center justify-center rounded-full bg-destructive text-white"
+                    >
+                      <Check size={14} />
+                    </button>
+                    <button
+                      aria-label="Cancelar"
+                      onClick={() => setConfirmDeletePhotoId(null)}
+                      className="h-10 w-10 flex items-center justify-center rounded-full bg-white/90 text-neutral"
+                    >
+                      <XIcon size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    aria-label="Excluir foto"
+                    onClick={() => setConfirmDeletePhotoId(p.id)}
+                    className="absolute -top-1.5 -right-1.5 h-6 w-6 flex items-center justify-center rounded-full bg-destructive text-white shadow-sm"
+                  >
+                    <XIcon size={12} />
+                  </button>
+                )}
+              </div>
             ))}
-            <label className="w-20 h-20 rounded-xl bg-surface flex items-center justify-center text-primary cursor-pointer">
+            <label className="w-40 h-40 rounded-xl bg-surface flex items-center justify-center text-primary cursor-pointer">
               {uploadPhoto.isPending ? (
                 <span className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               ) : (

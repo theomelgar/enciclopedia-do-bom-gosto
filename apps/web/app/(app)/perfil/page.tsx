@@ -8,11 +8,13 @@ import { useTheme } from "next-themes";
 import { LogOut, Sun, Moon, Monitor } from "lucide-react";
 import { useMe } from "@/hooks/use-me";
 import { useUploadAvatar } from "@/hooks/use-profile";
+import { useAvatarUrl } from "@/hooks/use-avatar-url";
 
 export default function PerfilPage() {
   const { data: members, isLoading } = useSpaceMembers();
   const router = useRouter();
   const { data: me } = useMe();
+  const { data: avatar } = useAvatarUrl(!!me?.user.avatarUrl);
   const uploadAvatar = useUploadAvatar();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -39,8 +41,8 @@ export default function PerfilPage() {
       </header>
       <section className="flex items-center gap-4">
         <label className="relative h-16 w-16 rounded-full overflow-hidden bg-surface cursor-pointer shrink-0">
-          {me?.user.avatarUrl ? (
-            <img src={me.user.avatarUrl} alt="" className="h-full w-full object-cover" />
+          {avatar?.url ? (
+            <img src={avatar.url} alt="" className="h-full w-full object-cover" />
           ) : (
             <span className="flex h-full items-center justify-center text-xl">👤</span>
           )}
@@ -71,9 +73,9 @@ export default function PerfilPage() {
                 
               <div className="flex gap-2 items-center">
                 <label className="relative h-16 w-16 rounded-full overflow-hidden bg-surface cursor-pointer shrink-0">
-                 {me?.user.avatarUrl ? (
-                   <img src={me.user.avatarUrl} alt="" className="h-full w-full object-cover" />
-                 ) : (
+                 {m.user.avatarUrl ? (
+                   <img src={m.user.avatarUrl} alt="" className="h-full w-full object-cover" />
+                  ) : (
                    <span className="flex h-full items-center justify-center text-xl">👤</span>
                  )}          
                  </label>

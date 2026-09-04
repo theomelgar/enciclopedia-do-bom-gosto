@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
-import { createHash } from "crypto";
+import { createHash, randomUUID } from "crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { cursorArgs, toCursorPage } from "../common/pagination";
 import {
@@ -111,9 +111,9 @@ async createShareCode(spaceId: string, recommendationId: string, userId: string)
     return { ...page, items: await this.withSignedPhotos(page.items) };
   }
   
-  create(spaceId: string, userId: string, dto: CreateRecommendationInput) {
-  const { keywords = [], categoryName, categoryId, brandId, ...data } = dto;
-    return this.prisma.recommendation.create({
+  async create(spaceId: string, userId: string, dto: CreateRecommendationInput) {
+    const { keywords = [], categoryName, categoryId, brandId, ...data } = dto;
+    const rec = await this.prisma.recommendation.create({
       data: {
         ...data,
         space: { connect: { id: spaceId } },
@@ -139,9 +139,63 @@ async createShareCode(spaceId: string, recommendationId: string, userId: string)
           : undefined,
       },
     });
+
+    this.attachAutoPhoto(spaceId, rec.id, dto.name, categoryName).catch(() => {
+      /* best-effort — auto-foto nunca bloqueia INV-008 */
+    });
+
+    return rec;
   }
 
-  
+  async deletePhoto(spaceId: string, recommendationId: string, photoId: string) {
+    const photo = await this.prisma.photo.findFirstOrThrow({
+      where: { id: photoId, recommendationId, recommendation: { spaceId } },
+    });
+    await this.storageService.deleteObject(photo.url);
+    return this.prisma.photo.delete({ where: { id: photoId } });
+  }
+
+  private async fetchWikiThumbnail(host: string, q: string): Promise<string | undefined> {
+  const searchUrl = new URL(`https://${host}/w/api.php`);
+  searchUrl.search = new URLSearchParams({
+    action: "query",
+    generator: "search",
+    gsrsearch: q,
+    gsrlimit: "1",
+    prop: "pageimages",
+    pithumbsize: "800",
+    format: "json",
+    origin: "*",
+  }).toString();
+
+  const res = await fetch(searchUrl, {
+    headers: { "User-Agent": "EnciclopediaDoBomGosto/1.0 (contato@ebg.app)" },
+    signal: AbortSignal.timeout(5000),
+  });
+  if (!res.ok) return undefined;
+  const data = await res.json();
+  const pages = data.query?.pages;
+  return pages ? (Object.values(pages)[0] as any)?.thumbnail?.source : undefined;
+}
+
+private async attachAutoPhoto(spaceId: string, recommendationId: string, name: string, categoryName?: string) {
+  const q = categoryName ? `${name} ${categoryName}` : name;
+
+  const imageUrl =
+    (await this.fetchWikiThumbnail("pt.wikipedia.org", q)) ??
+    (await this.fetchWikiThumbnail("en.wikipedia.org", q));
+  if (!imageUrl) return; // sem artigo em nenhum idioma — no-op, esperado pra entidades locais/obscuras
+
+  const imgRes = await fetch(imageUrl, { signal: AbortSignal.timeout(5000) });
+  if (!imgRes.ok) return;
+  const contentType = imgRes.headers.get("content-type") ?? "image/jpeg";
+  const ext = contentType.split("/")[1]?.split(";")[0] ?? "jpg";
+  const buffer = Buffer.from(await imgRes.arrayBuffer());
+  const path = `${spaceId}/${randomUUID()}.${ext}`;
+
+  await this.storageService.uploadBuffer(path, buffer, contentType);
+  await this.prisma.photo.create({ data: { recommendationId, url: path, kind: "recommendation" } });
+}
   async findById(spaceId: string, id: string) {
     const rec = await this.prisma.recommendation.findFirstOrThrow({
       where: { id, spaceId },

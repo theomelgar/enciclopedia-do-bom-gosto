@@ -26,3 +26,12 @@ export function useUploadPhoto(recommendationId: string) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["recommendations", recommendationId] }),
   });
 }
+
+export function useDeletePhoto(recommendationId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (photoId: string) =>
+      apiClient.delete(`/recommendations/${recommendationId}/photos/${photoId}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["recommendations", recommendationId] }),
+  });
+}

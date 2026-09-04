@@ -142,4 +142,10 @@ export class RecommendationsController {
   updateExperience(@Req() req: any, @Param("expId") expId: string, @Body() body: Partial<AddExperienceInput>) {
     return this.experiencesService.update(req.spaceId, expId, body);
   }
+
+  @Delete(":id/photos/:photoId")
+  deletePhoto(@Req() req: any, @Param("id") id: string, @Param("photoId") photoId: string) {
+    return this.recommendationsService.deletePhoto(req.spaceId, id, photoId);
+  }
+
 }

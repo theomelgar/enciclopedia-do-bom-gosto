@@ -63,3 +63,11 @@ export function useUpdateRecommendation(id: string) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["recommendations", id] }),
   });
 }
+
+export function useDeleteRecommendation(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiClient.delete(`/recommendations/${id}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["recommendations"] }),
+  });
+}

@@ -6,7 +6,7 @@ import { apiClient } from "@/lib/api-client";
 interface SpaceMemberItem {
   id: string;
   role: "OWNER" | "MEMBER";
-  user: { id: string; name: string; email: string };
+  user: { id: string; name: string; email: string; avatarUrl: string | null };
 }
 
 // GET /spaces/members — membros do Space ativo

@@ -27,6 +27,17 @@ export class StorageService {
     };
   }
 
+  async uploadBuffer(path: string, buffer: Buffer, contentType: string) {
+    const { error } = await this.supabase.client.storage
+      .from("recommendation-photos")
+      .upload(path, buffer, { contentType });
+    if (error) throw error;
+  }
+
+  async deleteObject(path: string) {
+    await this.supabase.client.storage.from("recommendation-photos").remove([path]);
+  }
+
   async getSignedReadUrl(path: string, expiresIn = 3600): Promise<string> {
     const { data, error } = await this.supabase.client.storage
       .from(BUCKET)

@@ -79,9 +79,10 @@ export const createPlaceSchema = z.object({
 });
 
 export const updateProfileSchema = z.object({
-  avatarUrl: z.string().url().nullable().optional(),
+  avatarUrl: z.string().min(1).nullable().optional(),
   name: z.string().min(1).optional(),
 });
+
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 
 export type CreatePlaceInput = z.infer<typeof createPlaceSchema>;

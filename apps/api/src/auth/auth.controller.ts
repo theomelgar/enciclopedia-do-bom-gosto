@@ -1,7 +1,7 @@
 import { Controller, Post, Get, Patch, Body, Req } from "@nestjs/common";
 import { AuthService } from "./auth.service";
 import { Public } from "./public.decorator";
-import { updateProfileSchema, UpdateProfileInput } from "@ebg/shared-types";
+import { updateProfileSchema } from "@ebg/shared-types";
 // Contrato: API_SPEC.md §Auth
 @Controller("auth")
 export class AuthController {
@@ -26,8 +26,14 @@ export class AuthController {
   }
 
   @Patch("me")
-  updateMe(@Req() req: any, @Body() body: UpdateProfileInput) {
+  updateMe(@Req() req: any, @Body() body: unknown) {
     const dto = updateProfileSchema.parse(body);
+
     return this.authService.updateProfile(req.user.id, dto);
+  }
+
+  @Get("me/avatar-url")
+    avatarUrl(@Req() req: any) {
+    return this.authService.getAvatarSignedUrl(req.user.id);
   }
 }

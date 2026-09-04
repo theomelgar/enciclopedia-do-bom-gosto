@@ -15,6 +15,9 @@ export function useUploadAvatar() {
       await apiClient.patch("/auth/me", { avatarUrl: path });
       return path;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["auth", "me"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
+      queryClient.invalidateQueries({ queryKey: ["auth", "me", "avatar-url"] });
+    },
   });
 }
