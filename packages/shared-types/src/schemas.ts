@@ -22,13 +22,13 @@ export type SetVerdictInput = z.infer<typeof setVerdictSchema>;
 
 export const linkPlaceSchema = z.object({
   placeId: z.string().cuid(),
-  lastPrice: z.number().positive().optional(),
+  lastPrice: z.number().nonnegative().optional(),
   notes: z.string().optional(),
 });
 export type LinkPlaceInput = z.infer<typeof linkPlaceSchema>;
 
 export const addPriceEntrySchema = z.object({
-  price: z.number().positive(),
+  price: z.number().nonnegative(),
   paidAt: z.coerce.date().optional(),
 });
 export type AddPriceEntryInput = z.infer<typeof addPriceEntrySchema>;

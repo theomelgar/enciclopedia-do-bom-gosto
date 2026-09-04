@@ -23,7 +23,7 @@ export class CollectionsService {
     const { recommendations, ...rest } = c;
     return { ...rest, coverUrl };
   }
-  
+
   async list(spaceId: string, filters: { cursor?: string; limit?: string }) {
     const take = Math.min(Math.max(Number(filters.limit) || 20, 1), 50);
     const rows = await this.prisma.collection.findMany({
@@ -43,14 +43,32 @@ export class CollectionsService {
 
   
   async findById(spaceId: string, id: string) {
-    return this.prisma.collection.findFirstOrThrow({
-      where: { id, spaceId },
-      include: {
+      const collection = await this.prisma.collection.findFirstOrThrow({
+        where: { id, spaceId },
+        include: {
         recommendations: {
           include: { recommendation: { include: { photos: { take: 1 } } } },
         },
       },
     });
+      const paths = collection.recommendations
+      .map((cr) => cr.recommendation.photos[0]?.url)
+      .filter((p): p is string => !!p);
+    const signed = await this.storageService.getSignedReadUrls(paths);
+
+    return {
+      ...collection,
+      recommendations: collection.recommendations.map((cr) => ({
+        ...cr,
+        recommendation: {
+          ...cr.recommendation,
+          photos: cr.recommendation.photos.map((p) => ({
+            ...p,
+            url: signed[p.url] ?? p.url,
+          })),
+        },
+      })),
+    };
   }
 
   create(spaceId: string, dto: CreateCollectionInput) {

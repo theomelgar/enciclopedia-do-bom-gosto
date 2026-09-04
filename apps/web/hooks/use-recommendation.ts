@@ -24,7 +24,7 @@ export interface RecommendationDetail {
     rating: number;
     comment: string | null;
     visitedAt: string;
-    author: { id: string; name: string };
+    author: { id: string; name: string; avatarUrl: string | null };
     place: { id: string; name: string } | null;
   }>;
   photos: Array<{ id: string; url: string; kind: string }>;

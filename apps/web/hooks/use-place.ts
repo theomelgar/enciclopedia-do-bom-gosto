@@ -46,7 +46,7 @@ export interface PlaceDetail {
     rating: number;
     comment: string | null;
     visitedAt: string;
-    author: { name: string };
+    author: { name: string; avatarUrl: string | null };
     recommendation: { id: string; name: string };
   }[];
 }

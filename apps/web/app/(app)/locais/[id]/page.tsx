@@ -6,7 +6,7 @@ import { DAY_LABEL, usePlace, useUpdatePlace } from "@/hooks/use-place";
 import { DAYS_OF_WEEK, UpdatePlaceInput } from "@ebg/shared-types";
 import { CategoryAutocomplete } from "@/components/CategoryAutocomplete";
 import { usePlaceCategories } from "@/hooks/use-categories";
-import { MapPin, Pencil, MessageCircle, Phone, Globe, Instagram as InstagramIcon } from "lucide-react";
+import { MapPin, Pencil, MessageCircle, Phone, Globe, Instagram as InstagramIcon, User, Star } from "lucide-react";
 import { ErrorState } from "@/components/ErrorState";
 import { useAddressSearch, type AddressSuggestion } from "@/hooks/use-address-search";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -448,16 +448,55 @@ export default function PlacePage() {
           <section className="flex flex-col gap-2">
             {place && place.experiences?.length === 0 && <p className="text-neutral text-sm">Nenhuma experiência ainda.</p>}
             {place?.experiences?.map((exp) => (
-              <button
+             <button
                 key={exp.id}
                 onClick={() => router.push(`/recomendacoes/${exp.recommendation.id}`)}
-                className="rounded-xl bg-surface px-4 py-3 text-left"
+                className="w-full rounded-xl bg-surface px-4 py-3 text-left transition-colors hover:bg-surface/80"
               >
-                <p className="text-sm text-neutral">
-                  {exp.author.name} · ★{exp.rating} · sobre <span className="text-primary-accent">{exp.recommendation.name}</span>
-                </p>
-                {exp.comment && <p className="text-text">{exp.comment}</p>}
+                <div className="flex gap-3">
+                  {/* Avatar */}
+                  <span className="h-10 w-10 rounded-full overflow-hidden bg-background ring-1 ring-black/5 flex items-center justify-center shrink-0">
+                    {exp.author.avatarUrl ? (
+                      <img
+                        src={exp.author.avatarUrl}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <User size={18} className="text-neutral" />
+                    )}
+                  </span>
+                  
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-sm font-semibold text-text truncate">
+                        {exp.author.name}
+                      </span>
+                  
+                      <span className="flex items-center gap-1 shrink-0 text-sm text-text">
+                        <Star
+                          size={14}
+                          className="fill-amber-400 text-amber-400"
+                        />
+                        <span>{exp.rating}</span>
+                      </span>
+                    </div>
+                  
+                    <p className="mt-0.5 text-xs text-neutral truncate">
+                      <span className="text-primary-accent">
+                        {exp.recommendation.name}
+                      </span>
+                    </p>
+                  
+                    {exp.comment && (
+                      <p className="mt-2 text-sm leading-relaxed text-text">
+                        {exp.comment}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </button>
+
             ))}
           </section>
         )}

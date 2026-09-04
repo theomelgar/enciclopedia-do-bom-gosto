@@ -15,7 +15,7 @@ import { useAddPriceEntry } from "@/hooks/use-price-entries";
 import { useDebounce } from "@/hooks/use-debounce";
 import { Lightbox } from "@/components/Lightbox";
 import type { Verdict } from "@ebg/shared-types";
-import { Navigation, X as XIcon, Check, Trash2, Link as LinkIcon, Pencil, Share2, MoveLeft  } from "lucide-react";
+import { Navigation, X as XIcon, Check, Trash2, Link as LinkIcon, Pencil, Share2, MoveLeft, User, Star  } from "lucide-react";
 import { ErrorState } from "@/components/ErrorState";
 import { useUpdateExperience } from "@/hooks/use-experiences";
 import { buildShareText } from "@/lib/share-text";
@@ -411,12 +411,12 @@ function RecommendationDetailContent() {
           <h2 className="font-display text-sm text-neutral uppercase tracking-wide mb-2">Fotos</h2>
           <div className="flex gap-2 flex-wrap">
             {rec.photos.map((p) => (
-              <div key={p.id} className="relative w-40 h-40">
+              <div key={p.id} className="relative w-32 h-32">
                 <img
                   src={p.url}
                   alt=""
                   onClick={() => setLightboxUrl(p.url)}
-                  className="w-40 h-40 object-cover rounded-xl cursor-pointer hover:opacity-80"
+                  className="w-32 h-32 object-cover rounded-xl cursor-pointer hover:opacity-80"
                 />
                 {confirmDeletePhotoId === p.id ? (
                   <div className="absolute inset-0 rounded-xl bg-black/60 flex items-center justify-center gap-4">
@@ -447,7 +447,7 @@ function RecommendationDetailContent() {
                 )}
               </div>
             ))}
-            <label className="w-40 h-40 rounded-xl bg-surface flex items-center justify-center text-primary cursor-pointer">
+            <label className="w-32 h-32 rounded-xl bg-surface flex items-center justify-center text-primary cursor-pointer">
               {uploadPhoto.isPending ? (
                 <span className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               ) : (
@@ -695,7 +695,7 @@ function RecommendationDetailContent() {
             {rec.experiences.length === 0 && <p className="text-neutral text-sm">Nenhuma ainda.</p>}
             <ul className="flex flex-col gap-2">
                {rec.experiences.map((exp) => (
-                 <li key={exp.id} className="rounded-xl bg-surface px-4 py-3">
+                 <li key={exp.id} className="rounded-xl bg-surface p-4">
                   {editingExpId === exp.id ? (
                     <div className="flex flex-col gap-2">
                       <input
@@ -742,9 +742,94 @@ function RecommendationDetailContent() {
                     </div>
                   ) : (
                     <>
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm text-neutral">{exp.author.name} · ★{exp.rating}</p>
-                        <div className="flex items-center gap-3 shrink-0">
+                    <div className="flex gap-3">
+                        <span className="h-10 w-10 rounded-full overflow-hidden bg-background ring-1 ring-black/5 flex items-center justify-center shrink-0">
+                          {exp.author.avatarUrl ? (
+                            <img
+                              src={exp.author.avatarUrl}
+                              alt=""
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <User size={18} className="text-neutral" />
+                          )}
+                        </span>
+                        
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="text-sm font-semibold text-text truncate">
+                                  {exp.author.name}
+                                </span>
+                        
+                                <span className="flex items-center gap-1 shrink-0 text-sm text-text">
+                                  <Star
+                                    size={14}
+                                    className="fill-amber-400 text-amber-400"
+                                  />
+                                  <span>{exp.rating}</span>
+                                </span>
+                              </div>
+                        
+                              {exp.place && (
+                                <button
+                                  onClick={() => router.push(`/locais/${exp.place!.id}`)}
+                                  className="mt-0.5 text-xs text-primary-accent hover:underline truncate max-w-full text-left"
+                                >
+                                  {exp.place.name}
+                                </button>
+                              )}
+                            </div>
+                            
+                            <button
+                              aria-label="Editar experiência"
+                              onClick={() => {
+                                setEditingExpId(exp.id);
+                                setExpRating(exp.rating);
+                                setExpComment(exp.comment ?? "");
+                                setExpPlaceId(exp.place?.id ?? "");
+                              }}
+                              className="shrink-0 p-1.5 -mr-1.5 rounded-md text-neutral hover:text-text hover:bg-background transition-colors"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                          </div>
+                            
+                          {exp.comment && (
+                            <p className="mt-2 text-sm leading-relaxed text-text">
+                              {exp.comment}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="h-10 w-10 rounded-full overflow-hidden bg-background ring-1 ring-black/5 flex items-center justify-center shrink-0">
+                            {exp.author.avatarUrl ? (
+                              <img src={exp.author.avatarUrl} alt="" className="h-full w-full object-cover" />
+                            ) : (
+                              <User size={18} className="text-neutral" />
+                            )}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="flex items-center justify-start gap-1 text-sm font-medium text-text truncate">{exp.author.name} · <Star size={14}/> {exp.rating} </div>
+                            <button
+                              aria-label="Editar experiência"
+                              onClick={() => {
+                                setEditingExpId(exp.id);
+                                setExpRating(exp.rating);
+                                setExpComment(exp.comment ?? "");
+                                setExpPlaceId(exp.place?.id ?? "");
+                              }}
+                              className="text-neutral"
+                            >
+                              <Pencil size={13} />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0 pt-1">
                           {exp.place && (
                             <button
                               onClick={() => router.push(`/locais/${exp.place!.id}`)}
@@ -753,21 +838,10 @@ function RecommendationDetailContent() {
                               {exp.place.name}
                             </button>
                           )}
-                          <button
-                            aria-label="Editar experiência"
-                            onClick={() => {
-                              setEditingExpId(exp.id);
-                              setExpRating(exp.rating);
-                              setExpComment(exp.comment ?? "");
-                              setExpPlaceId(exp.place?.id ?? "");
-                            }}
-                            className="text-neutral"
-                          >
-                            <Pencil size={13} />
-                          </button>
+                          
                         </div>
                       </div>
-                      {exp.comment && <p className="text-text">{exp.comment}</p>}
+                      {exp.comment && <p className="text-text mt-2 pl-[52px]">{exp.comment}</p>} */}
                     </>
                   )}
                  </li>

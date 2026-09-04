@@ -202,15 +202,35 @@ private async attachAutoPhoto(spaceId: string, recommendationId: string, name: s
       include: {
         places: { include: { place: true, priceHistory: true } },
         purchaseLinks: true,
-        experiences: { include: { author: true, place: true }, orderBy: { visitedAt: "desc" } },
-        photos: true,
+        experiences: {
+          include: {
+            author: { select: { id: true, name: true, avatarUrl: true } },
+            place: true,
+          },
+          orderBy: { visitedAt: "desc" },
+        },        photos: true,
         collections: { include: { collection: true } },
         brand: true,
         category: true,
       },
     });
     const [withPhotos] = await this.withSignedPhotos([rec]);
-    return withPhotos;
+
+    const avatarPaths = withPhotos.experiences
+      .map((e) => e.author.avatarUrl)
+      .filter((p): p is string => !!p);
+    const signedAvatars = await signPaths(this.storageService, avatarPaths);
+
+    return {
+      ...withPhotos,
+      experiences: withPhotos.experiences.map((e) => ({
+        ...e,
+        author: {
+          ...e.author,
+          avatarUrl: e.author.avatarUrl ? (signedAvatars[e.author.avatarUrl] ?? null) : null,
+        },
+      })),
+    };
   }
 
   async update(spaceId: string, id: string, dto: Partial<CreateRecommendationInput>) {
